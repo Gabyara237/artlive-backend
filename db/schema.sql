@@ -10,9 +10,9 @@ CREATE TYPE user_role AS ENUM ('instructor', 'student');
 
 CREATE TABLE users(
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) ,
     password TEXT NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
+    full_name VARCHAR(100) ,
     username VARCHAR(50) NOT NULL UNIQUE,
     bio TEXT,
     profile_image TEXT,
