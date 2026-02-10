@@ -11,6 +11,8 @@ auth_blueprint = Blueprint('auth_blueprint',__name__)
 
 @auth_blueprint.route('/auth/sign-up', methods=['POST'])
 def sign_up():
+    connection = None
+    cursor = None
     try:
         new_user_data = request.get_json()
         connection = get_db_connection()

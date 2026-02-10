@@ -66,7 +66,7 @@ CREATE TABLE workshops(
 
     materials_included TEXT,
     materials_to_bring TEXT,
-    image_url VARCHAR(255),
+    image TEXT DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
