@@ -21,11 +21,16 @@ def sign_up():
         if existing_username:
             return jsonify({"err":"Username already taken"}),409
         
-        
+        cursor.execute(" SELECT * FROM users WHERE email = %s ", (new_user_data["email"],))
+        existing_email = cursor.fetchone()
+
+        if existing_email:
+            return jsonify({"err": "Email alredy taken"}),409
+
         hashed_password = bcrypt.hashpw(
             bytes(new_user_data["password"], 'utf-8'), bcrypt.gensalt())
         
-        cursor.execute("INSERT INTO users (username, password, role) VALUES (%s,%s, %s) RETURNING id, username, role", (new_user_data["username"], hashed_password.decode('utf-8'), new_user_data["role"]))
+        cursor.execute("INSERT INTO users (username, email, password, role) VALUES (%s,%s, %s, %s) RETURNING id, username, role", (new_user_data["username"],new_user_data["email"], hashed_password.decode('utf-8'), new_user_data["role"]))
         create_user = cursor.fetchone()
         connection.commit()
 
@@ -58,7 +63,7 @@ def sign_in():
         connection = get_db_connection()
         cursor = connection.cursor( cursor_factory=psycopg2.extras.RealDictCursor)
 
-        cursor.execute("SELECT * FROM users WHERE username = %s;", (user_data["username"],))
+        cursor.execute("SELECT * FROM users WHERE username = %s ;", (user_data["username"],))
 
         existing_user= cursor.fetchone()
         if existing_user is None:

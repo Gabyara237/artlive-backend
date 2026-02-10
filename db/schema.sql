@@ -26,7 +26,7 @@ CREATE TYPE workshops_art_type AS ENUM (
 
 CREATE TABLE users(
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    email VARCHAR(255) UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
     password TEXT NOT NULL,
     full_name VARCHAR(100) ,
     username VARCHAR(50) NOT NULL UNIQUE,
