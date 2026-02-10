@@ -132,7 +132,6 @@ def get_workshops():
         
         workshops = cursor.fetchall()
 
-        connection.commit()
         for workshop in workshops:
             if workshop.get("workshop_date"):
                 workshop["workshop_date"] = workshop["workshop_date"].isoformat()
@@ -151,3 +150,40 @@ def get_workshops():
             connection.close()
         if cursor:
             connection.close()
+
+
+@workshops_blueprint.route('/workshops/<workshop_id>', methods=["GET"])
+@token_required
+def get_workshop(workshop_id):
+    connection = None
+    cursor= None
+    try:
+        connection= get_db_connection()
+        cursor = connection.cursor(
+            cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        cursor.execute(""" SELECT workshops.id, workshops.title, workshops.description, workshops.art_type, 
+                       workshops.level, workshops.workshop_date, workshops.start_time, workshops.duration_hours, 
+                       workshops.address, workshops.city, workshops.state,workshops.latitude, workshops.longitude, workshops.max_capacity, workshops.materials_included, 
+                       workshops.materials_to_bring, workshops.image_url,workshops.current_registrations, users.username AS instructor_username
+                       FROM workshops
+                       JOIN users ON workshops.user_id = users.id
+                       WHERE workshops.id = %s """,(workshop_id))
+        
+        workshop = cursor.fetchone()
+        if workshop.get("workshop_date"):
+                workshop["workshop_date"] = workshop["workshop_date"].isoformat()
+
+        if workshop.get("start_time"):
+                workshop["start_time"] = workshop["start_time"].strftime("%H:%M")
+
+        return jsonify(workshop),200
+
+    except Exception as err:
+        return jsonify({"err": str(err)}),500
+    
+    finally:
+        if connection:
+            connection.close()
+        if cursor:
+            cursor.close()
