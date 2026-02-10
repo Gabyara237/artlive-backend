@@ -187,3 +187,114 @@ def get_workshop(workshop_id):
             connection.close()
         if cursor:
             cursor.close()
+
+
+
+@workshops_blueprint.route('/workshops/<workshop_id>', methods=['PUT'])
+@token_required
+def update_workshop(workshop_id):
+    connection =None
+    cursor = None
+    try:
+        image = request.files.get("image")
+
+        image_url = None
+        if image:
+            image_url = upload_image(image)
+        
+        title = request.form.get("title")
+        description = request.form.get("description")
+        art_type = request.form.get("art_type")
+        level = request.form.get("level")
+
+        workshop_date = request.form.get("workshop_date")
+        start_time = request.form.get("start_time")
+        duration_hours = request.form.get("duration_hours")
+
+        address = request.form.get("address")
+        city = request.form.get("city")
+        state = request.form.get("state")
+
+        latitude, longitude =  geocode_adress(address,city,state)
+
+        max_capacity = request.form.get("max_capacity")
+        materials_included = request.form.get("materials_included")
+        materials_to_bring = request.form.get("materials_to_bring")
+
+        required_fields = {
+            "title": title,
+            "description": description,
+            "art_type": art_type,
+            "level": level,
+            "workshop_date": workshop_date,
+            "start_time": start_time,
+            "duration_hours": duration_hours,
+            "address": address,
+            "city": city,
+            "state": state,
+            "max_capacity": max_capacity
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if not value]
+
+        if missing_fields:
+            return jsonify({
+                "err": "Missing required fields",
+                "fields": missing_fields
+            }), 400
+        latitude, longitude = geocode_adress(address, city, state)
+
+        connection = get_db_connection()
+
+        cursor = connection.cursor(
+            cursor_factory= psycopg2.extras.RealDictCursor)
+        
+        cursor.execute(""" SELECT * FROM workshops WHERE workshops.id = %s""", (workshop_id,))
+
+        workshop_to_update = cursor.fetchone()
+
+        if workshop_to_update is None:
+            return jsonify({"err":"Workshop not found"}),404
+        
+        if workshop_to_update["user_id"] != g.user["id"]:
+            return jsonify({"err":"Unauthorized"}), 401
+        
+        final_image_url = image_url if image_url else workshop_to_update.get(
+            "image_url")
+        
+        cursor.execute(""" UPDATE workshops SET title =%s, description =%s, art_type =%s, level =%s, workshop_date =%s, start_time =%s, duration_hours=%s, address =%s, city=%s, state =%s, latitude =%s, longitude=%s, max_capacity=%s, materials_included=%s, materials_to_bring=%s, image_url=%s
+                       WHERE id =%s 
+                        RETURNING id""",                        
+                        ( title, description, art_type, level, workshop_date, start_time, int(duration_hours), address, city, state,latitude, longitude, int(max_capacity), materials_included, materials_to_bring, final_image_url, workshop_id )
+                        )
+        updated_id = cursor.fetchone()["id"]
+
+        cursor.execute(""" SELECT workshops.id, workshops.title, workshops.description, workshops.art_type, 
+                       workshops.level, workshops.workshop_date, workshops.start_time, workshops.duration_hours, 
+                       workshops.address, workshops.city, workshops.state,workshops.latitude, workshops.longitude, workshops.max_capacity, workshops.materials_included, 
+                       workshops.materials_to_bring, workshops.image_url, users.username AS instructor_username
+                       FROM workshops
+                       JOIN users ON workshops.user_id = users.id
+                       WHERE  workshops.id = %s               
+                       """, (updated_id,) )
+        
+        updated_workshop = cursor.fetchone()
+        connection.commit()
+
+        if updated_workshop.get("workshop_date"):
+            updated_workshop["workshop_date"] = updated_workshop["workshop_date"].isoformat()
+
+        if updated_workshop.get("start_time"):
+            updated_workshop["start_time"] = updated_workshop["start_time"].strftime("%H:%M")
+
+        return jsonify(updated_workshop), 200
+    
+    except Exception as err:
+
+        return jsonify({"err": str(err)}), 500
+    finally:
+        if connection:
+            connection.close()
+        if cursor:
+            cursor.close()
+
