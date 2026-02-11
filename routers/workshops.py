@@ -1,7 +1,5 @@
-import os
-import jwt
 import psycopg2
-import bcrypt
+from psycopg2 import errors
 import psycopg2.extras
 from flask import Blueprint,request, jsonify, g
 
@@ -100,6 +98,9 @@ def create_workshops():
             created_workshop["start_time"] = created_workshop["start_time"].strftime("%H:%M")
 
         return jsonify(created_workshop),201
+    
+    except errors.UniqueViolation:
+        return jsonify({"err":"You are already registered for this workshop"}), 409
     
     except Exception as err:
         return jsonify({"err": str(err)}), 500
@@ -333,3 +334,62 @@ def delete_workshop(workshop_id):
             cursor.close()
         if connection:
             connection.close()
+
+
+
+
+
+@workshops_blueprint.route('/workshops/<workshop_id>/registrations', methods=["POST"])
+@token_required
+def add_registration(workshop_id):
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_db_connection()
+        cursor= connection.cursor(
+            cursor_factory= psycopg2.extras.RealDictCursor)
+
+        user_id = g.user["id"]
+
+        cursor.execute("""SELECT id, max_capacity, current_registrations FROM workshops WHERE workshops.id = %s FOR UPDATE""", (workshop_id,))
+        workshop_to_register= cursor.fetchone()
+        
+
+        if workshop_to_register is None:
+            return jsonify({"err:", "Workshop not found"}),404                
+
+
+        if workshop_to_register["current_registrations"] >= workshop_to_register["max_capacity"]:
+            return jsonify({"err": "Workshop is full"}), 409
+
+
+        cursor.execute(""" INSERT INTO registrations(user_id, workshop_id)
+                       VALUES (%s,%s )
+                       RETURNING *
+                       """,(user_id, workshop_id))
+        
+        registration = cursor.fetchone()
+
+        cursor.execute(""" UPDATE workshops SET current_registrations = current_registrations +1, updated_at = CURRENT_TIMESTAMP
+                       WHERE id =%s
+                        """,(workshop_id))
+
+        connection.commit()
+        return jsonify(registration),201
+
+
+    except errors.UniqueViolation:
+        if connection:
+            connection.rollback()
+        return jsonify({"error": "You are already registered for this workshop"}), 409
+
+    except Exception as err:
+        return jsonify({"err": str(err)}),500
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+            
