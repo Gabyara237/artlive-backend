@@ -11,6 +11,7 @@ python-dotenv = "*"
 bcrypt = "*"
 cloudinary = "*"
 requests = "*"
+flask-cors = "*"
 
 [dev-packages]
 

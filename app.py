@@ -1,8 +1,11 @@
 from flask import Flask
 from routers.auth import auth_blueprint
 from routers.workshops import workshops_blueprint
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={
+     r"/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
 app.register_blueprint(auth_blueprint)
 app.register_blueprint(workshops_blueprint)
