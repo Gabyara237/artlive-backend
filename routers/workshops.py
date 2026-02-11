@@ -392,4 +392,54 @@ def add_registration(workshop_id):
             cursor.close()
         if connection:
             connection.close()
-            
+
+
+
+
+@workshops_blueprint.route('/workshops/<workshop_id>/registrations', methods = ["PUT"])
+@token_required
+def cancel_registration(workshop_id):
+    connection = None
+    cursor= None
+    try:
+        connection= get_db_connection()
+
+        cursor = connection.cursor(
+            cursor_factory= psycopg2.extras.RealDictCursor)
+        
+        user_id = g.user["id"]
+        
+        cursor.execute(""" SELECT * FROM registrations 
+                       WHERE user_id = %s AND workshop_id = %s
+                       """, (user_id,workshop_id))
+
+        registration_to_cancel = cursor.fetchone()
+
+        if registration_to_cancel is None:
+            return jsonify({"err": "Registration not found"}),404
+        
+
+        if registration_to_cancel["status"] == "cancelled":
+            return jsonify({"message": "Registration already cancelled"}), 200
+        
+        
+        cursor.execute("""UPDATE registrations SET status= 'cancelled', cancelled_at = CURRENT_TIMESTAMP
+                       WHERE registrations.id =%s
+                       RETURNING *
+                       """, (registration_to_cancel["id"],))
+
+
+        cursor.execute(""" UPDATE workshops SET current_registrations = current_registrations -1, updated_at = CURRENT_TIMESTAMP
+                       WHERE id =%s
+                       """,(workshop_id))
+
+        connection.commit()
+        return jsonify({"message": "Registration cancellation successful"}),200
+
+    except Exception as err:
+        return jsonify({"err":err}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()

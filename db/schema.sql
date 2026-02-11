@@ -85,6 +85,7 @@ CREATE table registrations(
     workshop_id INTEGER NOT NULL,
     status registration_status NOT NULL DEFAULT 'active',
     registered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cancelled_at TIMESTAMP NULL,
 
     CONSTRAINT registrations_user 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
