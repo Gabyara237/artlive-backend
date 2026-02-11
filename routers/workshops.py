@@ -443,3 +443,59 @@ def cancel_registration(workshop_id):
             cursor.close()
         if connection:
             connection.close()
+
+
+@workshops_blueprint.route('/workshops/<workshop_id>/registrations', methods=["GET"])
+@token_required
+def get_registrations(workshop_id):
+    connection = None
+    cursor = None
+    try:
+        connection= get_db_connection()
+        cursor = connection.cursor(
+            cursor_factory= psycopg2.extras.RealDictCursor)
+        
+        user_id= g.user["id"]
+
+        cursor.execute (""" SELECT role FROM users WHERE id=%s""", (user_id,))
+
+        user = cursor.fetchone()
+
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
+        
+
+        if user["role"] != "instructor":
+            return jsonify({"err": "Access for instructors only"}), 403
+        
+        cursor.execute(""" SELECT user_id FROM workshops 
+                       WHERE id = %s
+                       """, (workshop_id,))
+
+        workshop = cursor.fetchone()
+
+        if workshop is None:
+            return jsonify({"error": "Workshop not found"}), 404
+
+        if workshop["user_id"] != user_id:
+            return jsonify({"err": "Unauthorized"}), 403
+        
+        cursor.execute(""" SELECT registrations.id, registrations.user_id, registrations.status, registrations.registered_at , users.email, users.username, users.full_name 
+                       FROM registrations
+                       JOIN users ON users.id = registrations.user_id 
+                       WHERE registrations.workshop_id = %s 
+                       ORDER BY registrations.registered_at DESC
+                       """, (workshop_id,))
+        
+        registrations = cursor.fetchall()
+
+        return jsonify(registrations), 200
+
+    except Exception as err:
+        return jsonify({"err":err}),500
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
