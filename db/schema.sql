@@ -1,15 +1,18 @@
 CREATE DATABASE artlive;
 \c artlive
 
-DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS registrations CASCADE;
 DROP TABLE IF EXISTS workshops CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
 DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS difficulty_level CASCADE;
 DROP TYPE IF EXISTS workshops_art_type CASCADE;
+DROP TYPE IF EXISTS registration_status CASCADE;
 
 CREATE TYPE user_role AS ENUM ('instructor', 'student');
 CREATE TYPE difficulty_level AS ENUM ('beginner', 'intermediate', 'advanced');
+CREATE TYPE registration_status AS ENUM ('active','cancelled');
 CREATE TYPE workshops_art_type AS ENUM (  
     'watercolor_painting',
     'oil_painting',
@@ -66,11 +69,29 @@ CREATE TABLE workshops(
 
     materials_included TEXT,
     materials_to_bring TEXT,
-    image TEXT DEFAULT NULL,
+    image_url TEXT DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT workshops_capacity_check
     CHECK (max_capacity >= 0 AND current_registrations >= 0 AND current_registrations <= max_capacity)
+);
+
+
+CREATE table registrations(
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    workshop_id INTEGER NOT NULL,
+    status registration_status NOT NULL DEFAULT 'active',
+    registered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT registrations_user 
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+
+    CONSTRAINT registrations_workshop 
+    FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE CASCADE,
+
+    CONSTRAINT registration_user_workshop 
+    UNIQUE (user_id, workshop_id)
 )
