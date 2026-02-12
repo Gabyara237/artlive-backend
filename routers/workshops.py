@@ -14,7 +14,7 @@ from main import upload_image
 workshops_blueprint = Blueprint('workshops_blueprint', __name__)
 
 
-@workshops_blueprint.route('/workshops/', methods=["POST"])
+@workshops_blueprint.route('/workshops', methods=["POST"])
 @token_required
 @instructor_required
 def create_workshops():
@@ -115,7 +115,7 @@ def create_workshops():
 
 
 
-@workshops_blueprint.route('/workshops/', methods=["GET"])
+@workshops_blueprint.route('/workshops', methods=["GET"])
 @token_required
 def get_workshops():
     connection = None
@@ -167,7 +167,7 @@ def get_workshop(workshop_id):
         cursor.execute(""" SELECT workshops.id, workshops.title, workshops.description, workshops.art_type, 
                        workshops.level, workshops.workshop_date, workshops.start_time, workshops.duration_hours, 
                        workshops.address, workshops.city, workshops.state,workshops.latitude, workshops.longitude, workshops.max_capacity, workshops.materials_included, 
-                       workshops.materials_to_bring, workshops.image_url,workshops.current_registrations, users.username AS instructor_username
+                       workshops.materials_to_bring, workshops.image_url,workshops.current_registrations, users.username AS instructor_username, workshops.user_id AS instructor_id 
                        FROM workshops
                        JOIN users ON workshops.user_id = users.id
                        WHERE workshops.id = %s """,(workshop_id,))
@@ -334,7 +334,7 @@ def delete_workshop(workshop_id):
 
         connection.commit()
 
-        return jsonify({"message": "Workshop successfully removed"}), 200
+        return jsonify({"id": workshop_to_delete["id"]}), 200
     
     except Exception as err:
         return jsonify({"err": str(err)}), 500

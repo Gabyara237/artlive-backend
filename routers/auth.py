@@ -77,7 +77,8 @@ def sign_in():
         
         payload ={
             "username": existing_user["username"], 
-            "id": existing_user["id"]
+            "id": existing_user["id"],
+            "role":existing_user["role"]
         }
 
         token = jwt.encode({"payload": payload}, os.getenv('JWT_SECRET'))

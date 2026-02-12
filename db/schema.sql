@@ -11,12 +11,13 @@ DROP TYPE IF EXISTS workshops_art_type CASCADE;
 DROP TYPE IF EXISTS registration_status CASCADE;
 
 CREATE TYPE user_role AS ENUM ('instructor', 'student');
-CREATE TYPE difficulty_level AS ENUM ('beginner', 'intermediate', 'advanced');
+CREATE TYPE difficulty_level AS ENUM ('beginner', 'intermediate', 'advanced', 'all levels');
 CREATE TYPE registration_status AS ENUM ('active','cancelled');
 CREATE TYPE workshops_art_type AS ENUM (  
     'watercolor_painting',
     'oil_painting',
     'acrylic_painting',
+    'drawing',
     'charcoal_pastel_drawing',
     'ink_drawing_calligraphy',
     'mixed_media',
