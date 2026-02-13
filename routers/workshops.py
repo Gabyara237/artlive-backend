@@ -428,10 +428,21 @@ def cancel_registration(workshop_id):
             cursor_factory= psycopg2.extras.RealDictCursor)
         
         user_id = g.user["id"]
+
+        cursor.execute(""" SELECT id, current_registrations FROM workshops
+                        WHERE id = %s
+                        FOR UPDATE
+                        """, (workshop_id,))
+        
+        workshop = cursor.fetchone()
+
+        if workshop is None:
+            return jsonify({"err": "Workshop not found"}), 404
         
         cursor.execute(""" SELECT * FROM registrations 
                        WHERE user_id = %s AND workshop_id = %s
                        """, (user_id,workshop_id))
+        
 
         registration_to_cancel = cursor.fetchone()
 
@@ -448,18 +459,25 @@ def cancel_registration(workshop_id):
                        RETURNING *
                        """, (registration_to_cancel["id"],))
 
+        cancellation = cursor.fetchone()
 
-        cursor.execute(""" UPDATE workshops SET current_registrations = current_registrations -1, updated_at = CURRENT_TIMESTAMP
+        cursor.execute(""" UPDATE workshops SET current_registrations = GREATEST(current_registrations - 1, 0), updated_at = CURRENT_TIMESTAMP
                        WHERE id =%s
+                       RETURNING id, current_registrations, max_capacity, updated_at
                        """,(workshop_id,))
+        
+        updated_workshop = cursor.fetchone()
 
         connection.commit()
-        return jsonify({"message": "Registration cancellation successful"}),200
+        return jsonify({
+            "cancellation": cancellation,
+            "updated_workshop": updated_workshop
+        }),200
 
     except Exception as err:
         if connection:
             connection.rollback()
-        return jsonify({"err":err}), 500
+        return jsonify({"err": str(err)}), 500
     finally:
         if cursor:
             cursor.close()
@@ -504,7 +522,7 @@ def get_registrations(workshop_id):
         return jsonify(registrations), 200
 
     except Exception as err:
-        return jsonify({"err":err}), 500
+        return jsonify({"err": str(err)}), 500
     
     
     finally:
