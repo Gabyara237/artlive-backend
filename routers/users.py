@@ -4,7 +4,7 @@ import psycopg2.extras
 from flask import Blueprint, jsonify, g
 from db.db_helpers import get_db_connection
 from middleware.auth_middleware import token_required
-
+from middleware.role_middleware import instructor_required
 
 
 users_blueprint = Blueprint('users_blueprint', __name__)
@@ -22,19 +22,9 @@ def get_my_registrations():
         user_id = g.user["id"]
 
         cursor.execute("""
-            SELECT registrations.id AS registration_id,
-                registrations.status,
-                registrations.registered_at,
-                registrations.cancelled_at,
-                workshops.id AS workshop_id,
-                workshops.title,
-                workshops.workshop_date,
-                workshops.start_time,
-                workshops.duration_hours,
-                workshops.image_url,
-                workshops.address,
-                workshops.city,
-                workshops.state
+            SELECT registrations.id AS registration_id, registrations.status,registrations.registered_at,registrations.cancelled_at,workshops.id AS workshop_id,
+                workshops.title,workshops.art_type,workshops.level,workshops.workshop_date,workshops.start_time, workshops.duration_hours,workshops.image_url,
+                workshops.address,workshops.city,workshops.state
             FROM registrations 
             JOIN workshops ON workshops.id = registrations.workshop_id
             WHERE registrations.user_id = %s
@@ -59,6 +49,56 @@ def get_my_registrations():
 
 
         return jsonify({"registrations": registrations}), 200
+
+    except Exception as err:
+        return jsonify({"err": str(err)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+
+
+@users_blueprint.route('/users/me/workshops', methods=["GET"])
+@token_required
+@instructor_required
+def get_my_workshops():
+    connection= None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(
+            cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        user_id = g.user["id"]
+
+        cursor.execute("""
+            SELECT *
+            FROM workshops
+            WHERE user_id = %s
+            ORDER BY workshop_date ASC, start_time ASC;
+        """, (user_id,))
+
+        workshops = cursor.fetchall()
+
+        for workshop in workshops:
+            
+            if workshop.get("workshop_date"):
+                workshop["workshop_date"] = workshop["workshop_date"].isoformat()
+
+            if workshop.get("start_time"):
+                workshop["start_time"] = workshop["start_time"].strftime("%H:%M")
+
+            if workshop.get("registered_at"):
+                workshop["registered_at"] = workshop["registered_at"].isoformat()
+
+            if workshop.get("cancelled_at"):
+                workshop["cancelled_at"] = workshop["cancelled_at"].isoformat()
+
+
+        return jsonify({"workshops": workshops}), 200
 
     except Exception as err:
         return jsonify({"err": str(err)}), 500
@@ -98,3 +138,6 @@ def get_my_registration_for_workshop(workshop_id):
     finally:
         if cursor: cursor.close()
         if connection: connection.close()
+
+
+
