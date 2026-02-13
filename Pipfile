@@ -12,6 +12,7 @@ bcrypt = "*"
 cloudinary = "*"
 requests = "*"
 flask-cors = "*"
+gunicorn = "*"
 
 [dev-packages]
 
