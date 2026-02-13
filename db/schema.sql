@@ -96,4 +96,4 @@ CREATE table registrations(
 
     CONSTRAINT registration_user_workshop 
     UNIQUE (user_id, workshop_id)
-)
+);
